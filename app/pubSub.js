@@ -1,9 +1,9 @@
 var PubNub = require('pubnub');
 
 const credentials = {
-    publishKey: 'pub-c-bb3f4a89-fd23-4bb5-88be-31ff7a676691',
-    subscribeKey: 'sub-c-2f1250d6-4368-11ea-84be-3662be881406',
-    secretKey: 'sec-c-MzgzNGUxNDYtODk3MS00Mzk4LTg1ZjctYWFiYzY1OWUwZWZj',
+    publishKey: 'pub-c-444f3e79-ed36-4459-a797-74ccd8677ae1',
+    subscribeKey: 'sub-c-04de9e8e-43ed-11ea-8383-962d7bb31541',
+    secretKey: 'sec-c-MGFmYjNjYjAtNTU0Zi00OTg2LTk1ZjctNjljNzg4YTgwMmIz',
 };
 
 const CHANNELS = {
@@ -13,9 +13,10 @@ const CHANNELS = {
 };
 
 class PubSub {
-    constructor({ blockchain, transactionPool }) {
+    constructor({ blockchain, transactionPool,wallet }) {
         this.blockchain = blockchain;
         this.transactionPool = transactionPool;
+        this.wallet = wallet;
 
         this.pubnub = new PubNub(credentials);
 
@@ -33,10 +34,18 @@ class PubSub {
 
                 switch (channel) {
                     case CHANNELS.BLOCKCHAIN:
-                        this.blockchain.replaceChain(parsedMessage);
+                        this.blockchain.replaceChain(parsedMessage,true,()=>{
+                            this.transactionPool.clearBlockchainTransactions({
+                                chain : parsedMessage
+                            });
+                        });
                         break;
                     case CHANNELS.TRANSACTION:
-                        this.transactionPool.setTransaction(parsedMessage);
+                        if(!this.transactionPool.existingTransaction({
+                            inputAddress : this.wallet.publicKey
+                        })){
+                            this.transactionPool.setTransaction(parsedMessage);
+                        }
                         break;
                     default:
                         return;
@@ -48,11 +57,12 @@ class PubSub {
     }
 
     publish({ channel, message }) {
-        this.pubnub.unsubscribe({ channels: [channel] }, () => {
-            this.pubnub.publish({ channel, message }, () => {
-                this.pubnub.subscribe({ channels: [channel] })
-            });
-        });
+        this.pubnub.publish({ message, channel });
+        // this.pubnub.unsubscribe({ channels: [channel] }, () => {
+        //     this.pubnub.publish({ channel, message }, () => {
+        //         this.pubnub.subscribe({ channels: [channel] })
+        //     });
+        // });
 
     }
 
