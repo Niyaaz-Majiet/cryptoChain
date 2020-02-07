@@ -42,3 +42,8 @@ a{
 a:hover{
     font-size: 8rem;
 }
+
+.ConductTransaction , .TransactionPool{
+    margin: 10%;
+    
+}
